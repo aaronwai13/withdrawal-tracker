@@ -90,7 +90,7 @@
     transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1), padding 0.3s;
     padding: 0 20px;
   }
-  .add-section.open { max-height: 160px; padding: 20px; }
+  .add-section.open { max-height: 220px; padding: 20px; }
   .form-title { font-size: 12px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 14px; }
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
   .form-field { display: flex; flex-direction: column; gap: 5px; }
@@ -504,6 +504,7 @@
   window.toggleForm = () => {
     formOpen = !formOpen;
     document.getElementById('add-section').classList.toggle('open', formOpen);
+    document.getElementById('fab').style.display = formOpen ? 'none' : 'flex';
     if (formOpen) {
       document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
       document.getElementById('f-amount').value = '';
@@ -514,6 +515,7 @@
   window.closeForm = () => {
     formOpen = false;
     document.getElementById('add-section').classList.remove('open');
+    if (currentUser) document.getElementById('fab').style.display = 'flex';
   };
 
   window.saveRecord = async () => {
