@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>境外提現追蹤</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=Figtree:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F7F5;
+    --white: #FFFFFF;
+    --text: #111110;
+    --text-muted: #888884;
+    --text-light: #BBBBB8;
+    --border: #E5E5E2;
+    --border-strong: #D0D0CC;
+    --accent: #1A3C5E;
+    --accent-light: #E8EFF5;
+    --red: #C0392B;
+    --red-light: #FDF0EE;
+    --green: #1A6B45;
+    --shadow: 0 4px 16px rgba(0,0,0,0.08);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Figtree', sans-serif;
+    min-height: 100vh;
+    font-size: 15px;
+  }
+
+  /* LOGIN SCREEN */
+  #login-screen {
+    position: fixed; inset: 0; background: var(--white);
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; z-index: 100; padding: 40px 32px;
+    transition: opacity 0.3s;
+  }
+  .login-logo {
+    width: 52px; height: 52px; background: var(--accent);
+    border-radius: 14px; display: flex; align-items: center;
+    justify-content: center; margin-bottom: 28px;
+  }
+  .login-logo svg { width: 26px; height: 26px; stroke: white; fill: none; stroke-width: 2; stroke-linecap: round; }
+  .login-title { font-family: 'DM Serif Display', serif; font-size: 26px; margin-bottom: 6px; letter-spacing: -0.3px; }
+  .login-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 40px; text-align: center; line-height: 1.6; }
+
+  .google-btn {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 24px; background: var(--white);
+    border: 1.5px solid var(--border-strong); border-radius: 10px;
+    font-size: 15px; font-weight: 600; font-family: 'Figtree', sans-serif;
+    cursor: pointer; transition: background 0.15s, border-color 0.15s;
+    color: var(--text); width: 100%; max-width: 280px; justify-content: center;
+  }
+  .google-btn:active { background: var(--bg); }
+  .google-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+  .login-error {
+    margin-top: 16px; font-size: 13px; color: var(--red);
+    text-align: center; display: none;
+  }
+
+  .login-loading {
+    margin-top: 16px; font-size: 13px; color: var(--text-muted);
+    text-align: center; display: none;
+  }
+
+  /* APP */
+  #app { display: none; max-width: 480px; margin: 0 auto; padding-bottom: 100px; }
+
+  /* HEADER */
+  .header {
+    background: var(--white); padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .header-top { display: flex; align-items: center; justify-content: space-between; }
+  .header-label { font-size: 11px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .sync-label { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: #ccc; transition: background 0.4s; }
+  .sync-dot.live { background: #22c55e; }
+  .sync-dot.error-state { background: var(--red); }
+
+  .user-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent-light); border: 1.5px solid var(--border-strong);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: var(--accent); cursor: pointer;
+    overflow: hidden;
+  }
+  .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+  /* SUMMARY */
+  .summary { background: var(--white); padding: 20px; border-bottom: 1px solid var(--border); }
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  .stat-box { background: var(--bg); border-radius: 10px; padding: 14px 12px; }
+  .stat-label { font-size: 10px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+  .stat-value { font-family: 'DM Mono', monospace; font-size: 15px; font-weight: 500; color: var(--text); line-height: 1.2; }
+  .stat-value.red { color: var(--red); }
+  .stat-value.green { color: var(--green); }
+  .progress-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+  .progress-track { height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+  .progress-fill.danger { background: var(--red); }
+  .progress-fill.warn { background: #D4820A; }
+
+  /* ADD FORM */
+  .add-section {
+    background: var(--white); border-bottom: 1px solid var(--border);
+    overflow: hidden; max-height: 0;
+    transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1), padding 0.3s;
+    padding: 0 20px;
+  }
+  .add-section.open { max-height: 160px; padding: 20px; }
+  .form-title { font-size: 12px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 14px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .form-field { display: flex; flex-direction: column; gap: 5px; }
+  .form-field label { font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.5px; }
+  .form-field input {
+    padding: 10px 12px; border: 1.5px solid var(--border-strong);
+    border-radius: 8px; font-size: 15px; font-family: 'DM Mono', monospace;
+    background: var(--bg); color: var(--text); outline: none; transition: border-color 0.2s;
+  }
+  .form-field input:focus { border-color: var(--accent); }
+  .form-field input.err { border-color: var(--red); }
+  .form-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .btn-cancel {
+    padding: 10px; border: 1.5px solid var(--border-strong); border-radius: 8px;
+    background: transparent; color: var(--text-muted); font-size: 14px; font-weight: 600;
+    font-family: 'Figtree', sans-serif; cursor: pointer;
+  }
+  .btn-save {
+    padding: 10px; background: var(--accent); color: white; border: none;
+    border-radius: 8px; font-size: 14px; font-weight: 600;
+    font-family: 'Figtree', sans-serif; cursor: pointer;
+  }
+  .btn-save:disabled { opacity: 0.5; }
+
+  /* FAB */
+  .fab {
+    position: fixed; bottom: 28px; right: 50%; transform: translateX(50%);
+    background: var(--accent); color: white; border: none; border-radius: 99px;
+    padding: 14px 26px; font-size: 14px; font-weight: 600;
+    font-family: 'Figtree', sans-serif; cursor: pointer;
+    display: none; align-items: center; gap: 8px;
+    box-shadow: 0 4px 20px rgba(26,60,94,0.35);
+    z-index: 20; white-space: nowrap;
+  }
+  .fab:active { opacity: 0.88; }
+
+  /* TABLE */
+  .table-section { padding: 0 20px; }
+  .table-header {
+    display: grid; grid-template-columns: 70px 1fr 1fr 36px; gap: 8px;
+    padding: 14px 0 10px; border-bottom: 1.5px solid var(--border-strong);
+  }
+  .table-header span { font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-light); }
+  .table-header span:nth-child(2), .table-header span:nth-child(3) { text-align: right; }
+  .row {
+    display: grid; grid-template-columns: 70px 1fr 1fr 36px; gap: 8px;
+    padding: 14px 0; border-bottom: 1px solid var(--border);
+    align-items: center; animation: fadeIn 0.25s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+  .row-date { font-size: 13px; font-family: 'DM Mono', monospace; color: var(--text-muted); }
+  .row-amount { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--red); text-align: right; }
+  .row-remain { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--text); text-align: right; font-weight: 500; }
+  .row-del { display: flex; align-items: center; justify-content: flex-end; }
+  .del-btn {
+    width: 28px; height: 28px; border-radius: 6px; border: none;
+    background: transparent; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; color: var(--text-light); transition: background 0.15s, color 0.15s;
+  }
+  .del-btn:active { background: var(--red-light); color: var(--red); }
+  .empty-state { text-align: center; padding: 48px 0; color: var(--text-muted); font-size: 14px; }
+  .empty-icon { font-size: 32px; margin-bottom: 12px; opacity: 0.4; }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.25);
+    z-index: 50; display: none; align-items: flex-end;
+    justify-content: center; padding-bottom: 20px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal { background: var(--white); border-radius: 16px; padding: 24px; width: calc(100% - 40px); max-width: 440px; box-shadow: var(--shadow); }
+  .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+  .modal-body { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5; }
+  .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .modal-cancel { padding: 12px; border: 1.5px solid var(--border-strong); border-radius: 8px; background: transparent; font-size: 14px; font-weight: 600; font-family: 'Figtree', sans-serif; cursor: pointer; color: var(--text); }
+  .modal-confirm { padding: 12px; background: var(--red); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; font-family: 'Figtree', sans-serif; cursor: pointer; }
+
+  /* LOGOUT MODAL */
+  #logout-modal .modal-confirm { background: var(--accent); }
+
+  .divider { height: 8px; background: var(--bg); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-logo">
+    <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+  </div>
+  <div class="login-title">境外提現追蹤</div>
+  <div class="login-sub">使用授權帳號登入<br>以存取共用記錄</div>
+  <button class="google-btn" onclick="signInWithGoogle()">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+    </svg>
+    使用 Google 登入
+  </button>
+  <div class="login-error" id="login-error">此帳號無存取權限</div>
+  <div class="login-loading" id="login-loading">登入中…</div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="header">
+    <div class="header-top">
+      <div class="header-label">境外提現額度 2026</div>
+      <div class="header-right">
+        <div class="sync-label">
+          <span class="sync-dot" id="sync-dot"></span>
+          <span id="sync-text">連線中…</span>
+        </div>
+        <div class="user-avatar" id="user-avatar" onclick="showLogout()" title="登出"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="summary">
+    <div class="summary-grid">
+      <div class="stat-box">
+        <div class="stat-label">總額度</div>
+        <div class="stat-value" id="stat-total">100,000</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">已用</div>
+        <div class="stat-value red" id="stat-used">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">剩餘</div>
+        <div class="stat-value green" id="stat-remain">100,000</div>
+      </div>
+    </div>
+    <div class="progress-labels">
+      <span id="pct-label">已用 0%</span>
+      <span id="remain-label">剩餘 100,000</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+  </div>
+
+  <div class="add-section" id="add-section">
+    <div class="form-title">新增記錄</div>
+    <div class="form-row">
+      <div class="form-field">
+        <label>日期</label>
+        <input type="date" id="f-date">
+      </div>
+      <div class="form-field">
+        <label>金額</label>
+        <input type="text" inputmode="numeric" id="f-amount" placeholder="0">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeForm()">取消</button>
+      <button class="btn-save" id="save-btn" onclick="saveRecord()">確認</button>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="table-section">
+    <div class="table-header">
+      <span>日期</span>
+      <span>金額</span>
+      <span>剩餘額度</span>
+      <span></span>
+    </div>
+    <div id="records-list"><div class="empty-state"><div class="empty-icon">⏳</div>載入中…</div></div>
+  </div>
+</div>
+
+<button class="fab" id="fab" onclick="toggleForm()">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  新增提現
+</button>
+
+<!-- DELETE MODAL -->
+<div class="modal-overlay" id="del-modal">
+  <div class="modal">
+    <div class="modal-title">刪除記錄</div>
+    <div class="modal-body">確定要刪除這筆提現記錄？所有人都會看到此更改。</div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('del-modal')">取消</button>
+      <button class="modal-confirm" onclick="confirmDelete()">刪除</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOGOUT MODAL -->
+<div class="modal-overlay" id="logout-modal">
+  <div class="modal">
+    <div class="modal-title">登出</div>
+    <div class="modal-body" id="logout-body">確定要登出？</div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('logout-modal')">取消</button>
+      <button class="modal-confirm" style="background:var(--accent)" onclick="confirmLogout()">登出</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getDatabase, ref, onValue, push, remove }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyAANwwQ-_SYzvdxb_qcu0hlN2GrrbklIZU",
+    authDomain: "withdrawal-tracker.firebaseapp.com",
+    projectId: "withdrawal-tracker",
+    storageBucket: "withdrawal-tracker.firebasestorage.app",
+    messagingSenderId: "933023135573",
+    appId: "1:933023135573:web:4466b55b187184cd9ea1dc",
+    databaseURL: "https://withdrawal-tracker-default-rtdb.firebaseio.com"
+  };
+
+  const ALLOWED = ['nentivericfv@gmail.com', '1252719751@qq.com'];
+  const TOTAL = 100000;
+  const DB_PATH = 'records_2026';
+
+  const app = initializeApp(FIREBASE_CONFIG);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
+  const provider = new GoogleAuthProvider();
+
+  let dbRef, records = {}, deleteTarget = null, formOpen = false;
+
+  // AUTH STATE
+  onAuthStateChanged(auth, user => {
+    if (user && ALLOWED.includes(user.email)) {
+      showApp(user);
+      initDB();
+    } else if (user) {
+      // signed in but not allowed
+      signOut(auth);
+      showLoginError();
+    } else {
+      showLoginScreen();
+    }
+  });
+
+  // SIGN IN
+  window.signInWithGoogle = async () => {
+    document.getElementById('login-error').style.display = 'none';
+    document.getElementById('login-loading').style.display = 'block';
+    try {
+      await signInWithPopup(auth, provider);
+    } catch(e) {
+      document.getElementById('login-loading').style.display = 'none';
+      if (e.code !== 'auth/popup-closed-by-user') {
+        document.getElementById('login-error').textContent = '登入失敗，請重試';
+        document.getElementById('login-error').style.display = 'block';
+      }
+    }
+  };
+
+  function showLoginError() {
+    document.getElementById('login-loading').style.display = 'none';
+    document.getElementById('login-error').textContent = '此帳號無存取權限';
+    document.getElementById('login-error').style.display = 'block';
+  }
+
+  function showLoginScreen() {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('login-screen').style.opacity = '1';
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('fab').style.display = 'none';
+    document.getElementById('login-loading').style.display = 'none';
+  }
+
+  function showApp(user) {
+    document.getElementById('login-screen').style.opacity = '0';
+    setTimeout(() => {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      document.getElementById('fab').style.display = 'flex';
+    }, 300);
+
+    // avatar
+    const av = document.getElementById('user-avatar');
+    if (user.photoURL) {
+      av.innerHTML = `<img src="${user.photoURL}" alt="">`;
+    } else {
+      av.textContent = (user.displayName || user.email)[0].toUpperCase();
+    }
+    document.getElementById('logout-body').textContent = `確定要登出 ${user.email}？`;
+  }
+
+  // DB
+  function initDB() {
+    dbRef = ref(db, DB_PATH);
+    setSyncStatus('connecting');
+
+    onValue(dbRef, snap => {
+      records = snap.val() || {};
+      if (Object.keys(records).length === 0) {
+        seedDefaults();
+        return;
+      }
+      setSyncStatus('live');
+      render();
+    }, () => setSyncStatus('error'));
+  }
+
+  async function seedDefaults() {
+    const defaults = [
+      { date: '2026-01-09', amount: 1796.80 },
+      { date: '2026-01-19', amount: 2149.44 },
+      { date: '2026-01-29', amount: 4463.50 },
+      { date: '2026-02-10', amount: 798.75 },
+      { date: '2026-02-24', amount: 176.90 },
+      { date: '2026-03-03', amount: 4410.50 },
+      { date: '2026-03-08', amount: 885.20 },
+    ];
+    for (const d of defaults) await push(dbRef, { ...d, ts: Date.now() });
+  }
+
+  function setSyncStatus(state) {
+    const dot = document.getElementById('sync-dot');
+    const txt = document.getElementById('sync-text');
+    dot.className = 'sync-dot';
+    if (state === 'live') { dot.classList.add('live'); txt.textContent = '即時同步'; }
+    else if (state === 'error') { dot.classList.add('error-state'); txt.textContent = '連線失敗'; }
+    else { txt.textContent = '連線中…'; }
+  }
+
+  function render() {
+    const arr = Object.entries(records)
+      .map(([key, v]) => ({ key, ...v }))
+      .sort((a, b) => new Date(a.date) - new Date(b.date) || (a.ts||0) - (b.ts||0));
+
+    let running = TOTAL;
+    const rows = arr.map(r => { running -= r.amount; return { ...r, remain: running }; });
+
+    const totalUsed = arr.reduce((s, r) => s + r.amount, 0);
+    const totalRemain = TOTAL - totalUsed;
+    const pct = Math.min((totalUsed / TOTAL) * 100, 100);
+
+    document.getElementById('stat-total').textContent = fmt(TOTAL);
+    document.getElementById('stat-used').textContent = fmt(totalUsed);
+    document.getElementById('stat-remain').textContent = fmt(totalRemain);
+
+    const fill = document.getElementById('progress-fill');
+    fill.style.width = pct + '%';
+    fill.className = 'progress-fill' + (pct > 80 ? ' danger' : pct > 60 ? ' warn' : '');
+    document.getElementById('pct-label').textContent = `已用 ${pct.toFixed(1)}%`;
+    document.getElementById('remain-label').textContent = `剩餘 ${fmt(totalRemain)}`;
+
+    const list = document.getElementById('records-list');
+    if (rows.length === 0) {
+      list.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div>暫無記錄</div>`;
+      return;
+    }
+    list.innerHTML = [...rows].reverse().map(r => `
+      <div class="row">
+        <div class="row-date">${fmtDate(r.date)}</div>
+        <div class="row-amount">−${fmt(r.amount)}</div>
+        <div class="row-remain">${fmt(r.remain)}</div>
+        <div class="row-del">
+          <button class="del-btn" onclick="window._askDelete('${r.key}')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  const fmt = n => n.toLocaleString('en-HK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtDate = d => { const [,m,day] = d.split('-'); return `${parseInt(day)}/${parseInt(m)}`; };
+
+  // FORM
+  window.toggleForm = () => {
+    formOpen = !formOpen;
+    document.getElementById('add-section').classList.toggle('open', formOpen);
+    if (formOpen) {
+      document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+      document.getElementById('f-amount').value = '';
+      setTimeout(() => document.getElementById('f-amount').focus(), 350);
+    }
+  };
+
+  window.closeForm = () => {
+    formOpen = false;
+    document.getElementById('add-section').classList.remove('open');
+  };
+
+  window.saveRecord = async () => {
+    const date = document.getElementById('f-date').value;
+    const amount = parseFloat(document.getElementById('f-amount').value.replace(/,/g, ''));
+    const amtEl = document.getElementById('f-amount');
+    if (!date || isNaN(amount) || amount <= 0) {
+      amtEl.classList.add('err');
+      setTimeout(() => amtEl.classList.remove('err'), 1000);
+      return;
+    }
+    const btn = document.getElementById('save-btn');
+    btn.disabled = true; btn.textContent = '儲存中…';
+    try {
+      await push(dbRef, { date, amount, ts: Date.now() });
+      closeForm();
+    } finally {
+      btn.disabled = false; btn.textContent = '確認';
+    }
+  };
+
+  // DELETE
+  window._askDelete = key => {
+    deleteTarget = key;
+    document.getElementById('del-modal').classList.add('show');
+  };
+
+  window.closeModal = id => {
+    document.getElementById(id).classList.remove('show');
+    if (id === 'del-modal') deleteTarget = null;
+  };
+
+  window.confirmDelete = async () => {
+    if (deleteTarget) {
+      try { await remove(ref(db, `${DB_PATH}/${deleteTarget}`)); } catch(e) { console.error(e); }
+    }
+    closeModal('del-modal');
+  };
+
+  // LOGOUT
+  window.showLogout = () => document.getElementById('logout-modal').classList.add('show');
+  window.confirmLogout = async () => {
+    closeModal('logout-modal');
+    await signOut(auth);
+  };
+
+  document.querySelectorAll('.modal-overlay').forEach(el => {
+    el.addEventListener('click', e => { if (e.target === el) el.classList.remove('show'); });
+  });
+</script>
+</body>
+</html>
