@@ -1,7 +1,7 @@
 {
-  "name": "境外提現額度追蹤",
-  "short_name": "提現額度",
-  "description": "2026 年度境外提現額度追蹤",
+  "name": "境外撳錢額度",
+  "short_name": "撳錢額度",
+  "description": "境外提現額度追蹤 2026",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#F7F7F5",
