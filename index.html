@@ -152,7 +152,7 @@
     padding: 14px 0 10px; border-bottom: 1.5px solid var(--border-strong);
   }
   .table-header.guest { grid-template-columns: 70px 1fr 1fr; }
-  .table-header.authed { grid-template-columns: 70px 1fr 1fr 36px; }
+  .table-header.authed { grid-template-columns: 70px 1fr 1fr 64px; }
   .table-header span { font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-light); }
   .table-header span:nth-child(2), .table-header span:nth-child(3) { text-align: right; }
 
@@ -162,19 +162,20 @@
     align-items: center; animation: fadeIn 0.25s ease;
   }
   .row.guest { grid-template-columns: 70px 1fr 1fr; }
-  .row.authed { grid-template-columns: 70px 1fr 1fr 36px; }
+  .row.authed { grid-template-columns: 70px 1fr 1fr 64px; }
 
   @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
   .row-date { font-size: 13px; font-family: 'DM Mono', monospace; color: var(--text-muted); }
   .row-amount { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--red); text-align: right; }
   .row-remain { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--text); text-align: right; font-weight: 500; }
-  .row-del { display: flex; align-items: center; justify-content: flex-end; }
-  .del-btn {
+  .row-actions { display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
+  .del-btn, .edit-btn {
     width: 28px; height: 28px; border-radius: 6px; border: none;
     background: transparent; cursor: pointer; display: flex; align-items: center;
     justify-content: center; color: var(--text-light); transition: background 0.15s, color 0.15s;
   }
   .del-btn:active { background: var(--red-light); color: var(--red); }
+  .edit-btn:active { background: var(--accent-light); color: var(--accent); }
 
   .empty-state { text-align: center; padding: 48px 0; color: var(--text-muted); font-size: 14px; }
   .empty-icon { font-size: 32px; margin-bottom: 12px; opacity: 0.4; }
@@ -216,7 +217,7 @@
   <!-- HEADER -->
   <div class="header">
     <div class="header-top">
-      <div class="header-label">境外提現額度 2026</div>
+      <div class="header-label">境外撳錢額度 2026</div>
       <div class="header-right">
         <div class="sync-label">
           <span class="sync-dot" id="sync-dot"></span>
@@ -288,7 +289,7 @@
 <!-- FAB -->
 <button class="fab" id="fab" onclick="toggleForm()">
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-  新增提現
+  新增撳錢
 </button>
 
 <!-- LOGIN MODAL -->
@@ -314,10 +315,31 @@
 <div class="modal-overlay" id="del-modal">
   <div class="modal">
     <div class="modal-title">刪除記錄</div>
-    <div class="modal-body">確定要刪除這筆提現記錄？所有人都會看到此更改。</div>
+    <div class="modal-body">確定要刪除這筆撳錢記錄？所有人都會看到此更改。</div>
     <div class="modal-actions">
       <button class="modal-cancel" onclick="closeModal('del-modal')">取消</button>
       <button class="modal-confirm" onclick="confirmDelete()">刪除</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-title">編輯記錄</div>
+    <div class="form-row" style="margin-bottom:12px;">
+      <div class="form-field">
+        <label>日期</label>
+        <input type="date" id="edit-date">
+      </div>
+      <div class="form-field">
+        <label>金額</label>
+        <input type="text" inputmode="numeric" id="edit-amount" placeholder="0">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('edit-modal')">取消</button>
+      <button class="modal-confirm" style="background:var(--accent)" onclick="confirmEdit()">儲存</button>
     </div>
   </div>
 </div>
@@ -343,7 +365,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getDatabase, ref, onValue, push, remove }
+  import { getDatabase, ref, onValue, push, remove, update }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
   const FIREBASE_CONFIG = {
@@ -506,9 +528,12 @@
         <div class="row-date">${fmtDate(r.date)}</div>
         <div class="row-amount">−${fmt(r.amount)}</div>
         <div class="row-remain">${fmt(r.remain)}</div>
-        ${isAuthed ? `<div class="row-del">
+        ${isAuthed ? `<div class="row-actions">
+          <button class="edit-btn" onclick="window._askEdit('${r.key}','${r.date}',${r.amount})">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
           <button class="del-btn" onclick="window._askDelete('${r.key}')">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
           </button>
         </div>` : ''}
       </div>
@@ -554,6 +579,27 @@
     } finally {
       btn.disabled = false; btn.textContent = '確認';
     }
+  };
+
+  // EDIT
+  let editTarget = null;
+  window._askEdit = (key, date, amount) => {
+    editTarget = key;
+    document.getElementById('edit-date').value = date;
+    document.getElementById('edit-amount').value = amount;
+    document.getElementById('edit-modal').classList.add('show');
+  };
+
+  window.confirmEdit = async () => {
+    if (!editTarget) return;
+    const date = document.getElementById('edit-date').value;
+    const amount = parseFloat(document.getElementById('edit-amount').value.replace(/,/g, ''));
+    if (!date || isNaN(amount) || amount <= 0) return;
+    try {
+      await update(ref(db, `${DB_PATH}/${editTarget}`), { date, amount });
+    } catch(e) { console.error(e); }
+    closeModal('edit-modal');
+    editTarget = null;
   };
 
   // DELETE
