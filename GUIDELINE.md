@@ -77,7 +77,8 @@ Firebase SDK 直接從 CDN 引入，唔需要 `npm install`。
 - **文字色**：固定白色
 - **字體**：固定 PingFang SC（蘋方），路徑 `/System/Library/Fonts/PingFang.ttc`
 - **圓角**：約 20–22% border-radius（192px icon → 約 40px）
-- **最低要求**：192×192px，建議同時提供 512×512px
+- **最低要求**：192×192px（iOS 用戶只需此尺寸）
+- **512×512px**：只有需要支援 Android 啟動畫面或 Google Play 發佈時才需要
 - **Maskable**：`purpose: "any maskable"`，圖案主體需在中心 80% 安全區內
 
 用以下 Python 腳本生成（需安裝 Pillow）：
