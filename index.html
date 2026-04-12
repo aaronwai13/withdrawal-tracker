@@ -1,4 +1,4 @@
-<!-- VERSION: 2026.04.11.0 -->
+<!-- VERSION: 2026.04.13.0 -->
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
@@ -399,23 +399,30 @@
   const db = getDatabase(fbApp);
   const provider = new GoogleAuthProvider();
 
+  const DEFAULT_RECORDS = [
+    { date: '2026-01-09', amount: 1796.80 },
+    { date: '2026-01-19', amount: 2149.44 },
+    { date: '2026-01-29', amount: 4463.50 },
+    { date: '2026-02-10', amount: 798.75 },
+    { date: '2026-02-24', amount: 176.90 },
+    { date: '2026-03-03', amount: 4410.50 },
+    { date: '2026-03-08', amount: 885.20 },
+  ];
+
   let dbRef = ref(db, DB_PATH);
   let records = {}, deleteTarget = null, formOpen = false;
   let currentUser = null;
   let dbInitialized = false;
+  let seedAttempted = false;
 
   // INIT DB (always, no auth needed to read)
   setSyncStatus('connecting');
   onValue(dbRef, snap => {
-    if (!snap.val() && !dbInitialized) {
-      dbInitialized = true;
-      seedDefaults();
-      return;
-    }
     dbInitialized = true;
     records = snap.val() || {};
     setSyncStatus('live');
     render();
+    maybeSeedDefaults();
   }, () => setSyncStatus('error'));
 
   // AUTH STATE
@@ -456,6 +463,7 @@
     document.getElementById('logout-body').textContent = `確定要登出 ${user.email}？`;
     closeModal('login-modal');
     render();
+    maybeSeedDefaults();
   }
 
   // SIGN IN
@@ -479,17 +487,21 @@
     el.style.display = 'block';
   }
 
+  async function maybeSeedDefaults() {
+    if (!currentUser || !dbInitialized || seedAttempted || Object.keys(records).length > 0) return;
+    seedAttempted = true;
+    try {
+      await seedDefaults();
+    } catch (e) {
+      seedAttempted = false;
+      console.error(e);
+    }
+  }
+
   async function seedDefaults() {
-    const defaults = [
-      { date: '2026-01-09', amount: 1796.80 },
-      { date: '2026-01-19', amount: 2149.44 },
-      { date: '2026-01-29', amount: 4463.50 },
-      { date: '2026-02-10', amount: 798.75 },
-      { date: '2026-02-24', amount: 176.90 },
-      { date: '2026-03-03', amount: 4410.50 },
-      { date: '2026-03-08', amount: 885.20 },
-    ];
-    for (const d of defaults) await push(dbRef, { ...d, ts: Date.now() });
+    for (const record of DEFAULT_RECORDS) {
+      await push(dbRef, { ...record, ts: Date.now() });
+    }
   }
 
   function setSyncStatus(state) {
@@ -557,6 +569,11 @@
 
   const fmt = n => n.toLocaleString('en-HK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const fmtDate = d => { const [,m,day] = d.split('-'); return `${parseInt(day)}/${parseInt(m)}`; };
+  const todayLocal = () => {
+    const now = new Date();
+    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+    return local.toISOString().split('T')[0];
+  };
 
   // FORM
   window.toggleForm = () => {
@@ -564,7 +581,7 @@
     document.getElementById('add-section').classList.toggle('open', formOpen);
     document.getElementById('fab').style.display = formOpen ? 'none' : 'flex';
     if (formOpen) {
-      document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+      document.getElementById('f-date').value = todayLocal();
       document.getElementById('f-amount').value = '';
       setTimeout(() => document.getElementById('f-amount').focus(), 350);
     }

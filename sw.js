@@ -1,8 +1,8 @@
-const CACHE = 'withdrawal-tracker-v2026.04.11.0';
+const CACHE = 'withdrawal-tracker-v2026.04.13.0';
 
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(['./', './index.html', './manifest.json']))
+    caches.open(CACHE).then(c => c.addAll(['./', './index.html', './manifest.json', './icon-192.png']))
   );
   self.skipWaiting();
 });
@@ -17,6 +17,8 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
+
   // Firebase / Google 請求：直接網絡，唔快取
   if (e.request.url.includes('firebaseio.com') ||
       e.request.url.includes('googleapis.com') ||
