@@ -1,13 +1,12 @@
 # Withdrawal Tracker
 
-一個手機優先嘅靜態 PWA，用嚟追蹤 2026 年境外撳錢額度。資料儲存在 Firebase Realtime Database，未登入用戶可讀取，授權 Google 帳號可新增、編輯同刪除記錄。
+一個手機優先嘅靜態 PWA，用嚟追蹤 2026 年撳錢額度。資料儲存在 Firebase Realtime Database，未登入用戶可讀取，授權 Google 帳號可新增、編輯同刪除記錄。
 
 ## Files
 
 - `index.html`: UI、樣式同 app logic
 - `manifest.json`: PWA manifest
 - `sw.js`: service worker 同快取策略
-- `icon-192.png`: app icon
 
 ## App Config
 
