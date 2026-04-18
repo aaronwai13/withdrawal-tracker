@@ -1,4 +1,4 @@
-<!-- VERSION: 2026.04.14.13 -->
+<!-- VERSION: 2026.04.18.1 -->
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
@@ -7,52 +7,33 @@
 <title>撳錢額度</title>
 <meta name="theme-color" content="#F7F7F5" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111112" media="(prefers-color-scheme: dark)">
-<link rel="icon" href="./icon-v2026.04.14.13.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="./apple-touch-icon-v2026.04.14.13.png">
-<link rel="manifest" href="./manifest.json?v=2026.04.14.13">
+<link rel="icon" href="./icon-v2026.04.18.1.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./apple-touch-icon-v2026.04.18.1.png">
+<link rel="manifest" href="./manifest.json?v=2026.04.18.1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="撳錢額度">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=Figtree:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #F7F7F5;
-    --white: #FFFFFF;
-    --surface2: #F0F0EE;
-    --text: #111110;
-    --text-muted: #888884;
-    --text-light: #BBBBB8;
-    --border: #E5E5E2;
-    --border-strong: #D0D0CC;
-    --accent: #1A3C5E;
-    --accent-light: #E8EFF5;
-    --green: #1A6B45;
-    --green-light: #E8F5EE;
-    --amber: #8B5E00;
-    --amber-light: #FEF7E8;
-    --red: #C0392B;
-    --red-light: #FDF0EE;
+    --bg: #F7F7F5; --white: #FFFFFF; --surface2: #F0F0EE;
+    --text: #111110; --text-muted: #888884; --text-light: #BBBBB8;
+    --border: #E5E5E2; --border-strong: #D0D0CC;
+    --accent: #1A3C5E; --accent-light: #E8EFF5;
+    --green: #1A6B45; --green-light: #E8F5EE;
+    --amber: #8B5E00; --amber-light: #FEF7E8;
+    --red: #C0392B; --red-light: #FDF0EE;
     --shadow: 0 2px 12px rgba(0,0,0,0.07);
   }
-
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #111112;
-      --white: #1C1C1E;
-      --surface2: #252527;
-      --text: #F2F2F0;
-      --text-muted: #888884;
-      --text-light: #48484A;
-      --border: #2A2A2C;
-      --border-strong: #3A3A3C;
-      --accent: #5B9BD5;
-      --accent-light: #1A2A3A;
-      --green: #4ADE80;
-      --green-light: #0A2016;
-      --amber: #FCD34D;
-      --amber-light: #251A00;
-      --red: #F87171;
-      --red-light: #2A1010;
+      --bg: #111112; --white: #1C1C1E; --surface2: #252527;
+      --text: #F2F2F0; --text-muted: #888884; --text-light: #48484A;
+      --border: #2A2A2C; --border-strong: #3A3A3C;
+      --accent: #5B9BD5; --accent-light: #1A2A3A;
+      --green: #4ADE80; --green-light: #0A2016;
+      --amber: #FCD34D; --amber-light: #251A00;
+      --red: #F87171; --red-light: #2A1010;
       --shadow: 0 2px 16px rgba(0,0,0,0.4);
     }
   }
@@ -60,55 +41,82 @@
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
   body {
-    background: var(--bg);
-    color: var(--text);
+    background: var(--bg); color: var(--text);
     font-family: 'Figtree', sans-serif;
-    min-height: 100vh;
-    font-size: 15px;
+    min-height: 100vh; font-size: 15px;
   }
 
   /* APP */
-  #app { max-width: 480px; margin: 0 auto; padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
+  #app { max-width: 480px; margin: 0 auto; padding-top: 48px; padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
 
-  /* HEADER */
-  .header {
-    background: var(--white); padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
-    position: sticky; top: 0; z-index: 10;
+  /* TOP BAR */
+  .top-bar {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: var(--white); border-bottom: 1px solid var(--border);
+    padding: 0 16px; display: flex; align-items: center;
+    justify-content: space-between; z-index: 150; height: 48px;
   }
-  .header-top { display: flex; align-items: center; justify-content: space-between; }
-  .header-left { display: flex; flex-direction: column; gap: 4px; }
-  .header-label { font-size: 11px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); }
-  .header-version {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    color: var(--text-light);
-    letter-spacing: 0.04em;
+  .top-bar-title-wrap { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+  .top-bar-title {
+    font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.15em;
+    color: var(--accent); text-transform: uppercase; white-space: nowrap;
   }
-  .header-right { display: flex; align-items: center; gap: 12px; }
+  .app-version {
+    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.04em;
+    color: var(--text-light); white-space: nowrap;
+  }
+  .top-bar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
-  .sync-label { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
-  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: #ccc; transition: background 0.4s; }
-  .sync-dot.live { background: #22c55e; }
-  .sync-dot.error-state { background: var(--red); }
+  /* SYNC CHIP */
+  .sync-chip {
+    display: none; align-items: center; gap: 6px;
+    padding: 5px 10px; border-radius: 999px;
+    border: 1px solid rgba(128,128,128,0.16); background: rgba(128,128,128,0.08);
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    letter-spacing: 0.04em; color: var(--text-muted); white-space: nowrap;
+  }
+  .sync-chip.show { display: inline-flex; }
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); }
+  .sync-chip.loading .sync-dot { background: var(--accent); animation: sync-pulse 1.6s ease-in-out infinite; }
+  .sync-chip.live .sync-dot { background: #22c55e; }
+  .sync-chip.error .sync-dot { background: var(--red); }
+  @keyframes sync-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(91,155,213,0.4); }
+    70%  { box-shadow: 0 0 0 6px rgba(91,155,213,0); }
+    100% { box-shadow: 0 0 0 0 rgba(91,155,213,0); }
+  }
 
-  /* LOGIN BTN (未登入) */
+  /* REFRESH BTN */
+  .refresh-btn {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(128,128,128,0.08); border: 1px solid rgba(128,128,128,0.16);
+    color: var(--text-muted); font-size: 13px;
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; flex-shrink: 0; transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+  .refresh-btn:active { transform: scale(0.94); }
+  .refresh-btn.spinning { animation: refresh-spin 0.8s linear infinite; }
+  @keyframes refresh-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  /* LOGIN CHIP */
   .login-chip {
     font-size: 12px; font-weight: 600; color: var(--accent);
     background: var(--accent-light); border: none; border-radius: 20px;
     padding: 5px 12px; cursor: pointer; font-family: 'Figtree', sans-serif;
-    transition: opacity 0.15s;
+    transition: opacity 0.15s; display: none;
   }
   .login-chip:active { opacity: 0.7; }
+  .login-chip.show { display: block; }
 
-  /* USER AVATAR (已登入) */
+  /* USER AVATAR */
   .user-avatar {
     width: 28px; height: 28px; border-radius: 50%;
     background: var(--accent-light); border: 1.5px solid var(--border-strong);
-    align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 700; color: var(--accent); cursor: pointer;
-    overflow: hidden; display: none;
+    display: none; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    cursor: pointer; overflow: hidden; flex-shrink: 0;
   }
+  .user-avatar.show { display: flex; }
   .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
   /* SUMMARY */
@@ -238,21 +246,20 @@
 <body>
 
 <div id="app">
-  <!-- HEADER -->
-  <div class="header">
-    <div class="header-top">
-      <div class="header-left">
-        <div class="header-label">撳錢額度 2026</div>
-        <div class="header-version">v2026.04.14.13</div>
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="top-bar-title-wrap">
+      <div class="top-bar-title">撳錢額度</div>
+      <div class="app-version">v2026.04.18.1</div>
+    </div>
+    <div class="top-bar-right">
+      <div class="sync-chip" id="sync-chip">
+        <span class="sync-dot" id="sync-dot"></span>
+        <span id="sync-text">連線中…</span>
       </div>
-      <div class="header-right">
-        <div class="sync-label">
-          <span class="sync-dot" id="sync-dot"></span>
-          <span id="sync-text">連線中…</span>
-        </div>
-        <button class="login-chip" id="login-chip" onclick="showLoginModal()">登入</button>
-        <div class="user-avatar" id="user-avatar" onclick="showLogoutModal()"></div>
-      </div>
+      <button class="refresh-btn" id="refresh-btn" onclick="refreshData()" title="重新整理">↻</button>
+      <button class="login-chip" id="login-chip" onclick="showLoginModal()">登入</button>
+      <div class="user-avatar" id="user-avatar" onclick="showLogoutModal()"></div>
     </div>
   </div>
 
@@ -460,18 +467,17 @@
   });
 
   function setGuestUI() {
-    document.getElementById('login-chip').style.display = 'block';
-    const av = document.getElementById('user-avatar');
-    av.style.display = 'none';
+    document.getElementById('login-chip').classList.add('show');
+    document.getElementById('user-avatar').classList.remove('show');
     document.getElementById('fab').style.display = 'none';
     closeForm();
     render();
   }
 
   function setAuthedUI(user) {
-    document.getElementById('login-chip').style.display = 'none';
+    document.getElementById('login-chip').classList.remove('show');
     const av = document.getElementById('user-avatar');
-    av.style.display = 'flex';
+    av.classList.add('show');
     if (user.photoURL) {
       av.innerHTML = `<img src="${user.photoURL}" alt="">`;
     } else {
@@ -521,13 +527,20 @@
   }
 
   function setSyncStatus(state) {
-    const dot = document.getElementById('sync-dot');
+    const chip = document.getElementById('sync-chip');
     const txt = document.getElementById('sync-text');
-    dot.className = 'sync-dot';
-    if (state === 'live') { dot.classList.add('live'); txt.textContent = '即時同步'; }
-    else if (state === 'error') { dot.classList.add('error-state'); txt.textContent = '連線失敗'; }
-    else { txt.textContent = '連線中…'; }
+    chip.className = 'sync-chip show';
+    if (state === 'live') { chip.classList.add('live'); txt.textContent = '已同步'; }
+    else if (state === 'error') { chip.classList.add('error'); txt.textContent = '連線失敗'; }
+    else { chip.classList.add('loading'); txt.textContent = '同步中…'; }
   }
+
+  window.refreshData = () => {
+    const btn = document.getElementById('refresh-btn');
+    btn.classList.add('spinning');
+    setSyncStatus('connecting');
+    setTimeout(() => { btn.classList.remove('spinning'); setSyncStatus('live'); }, 700);
+  };
 
   function render() {
     const isAuthed = !!currentUser;
