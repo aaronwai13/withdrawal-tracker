@@ -4,7 +4,19 @@
       ".read": true,
       ".write": "auth != null && (auth.token.email == 'nentivericfv@gmail.com' || auth.token.email == '1252719751@qq.com')",
       "$record": {
-        ".validate": "newData.hasChildren(['date', 'amount', 'ts']) && newData.childrenCount() == 3 && newData.child('date').isString() && newData.child('date').val().matches(/^\\d{4}-\\d{2}-\\d{2}$/) && newData.child('amount').isNumber() && newData.child('amount').val() > 0 && newData.child('amount').val() <= 100000 && newData.child('ts').isNumber()"
+        ".validate": "newData.hasChildren(['date', 'amount', 'ts'])",
+        "date": {
+          ".validate": "newData.isString() && newData.val().matches(/^\\d{4}-\\d{2}-\\d{2}$/)"
+        },
+        "amount": {
+          ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 100000"
+        },
+        "ts": {
+          ".validate": "newData.isNumber()"
+        },
+        "$other": {
+          ".validate": false
+        }
       }
     }
   }
