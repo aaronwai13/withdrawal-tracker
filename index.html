@@ -1,4 +1,4 @@
-<!-- VERSION: 2026.04.23.3 -->
+<!-- VERSION: 2026.04.28.1 -->
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#111112" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="./icon-v2026.04.14.13.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./apple-touch-icon-v2026.04.14.13.png">
-<link rel="manifest" href="./manifest.json?v=2026.04.23.3">
+<link rel="manifest" href="./manifest.json?v=2026.04.28.1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="撳錢額度">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -121,6 +121,33 @@
   .progress-fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
   .progress-fill.danger { background: var(--red); }
   .progress-fill.warn { background: #D4820A; }
+
+  /* MONTH FILTER */
+  .month-panel {
+    background: var(--white); border-bottom: 1px solid var(--border);
+    padding: 16px 20px 18px;
+  }
+  .month-filter-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .month-filter-title { font-size: 12px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-muted); }
+  .month-select {
+    min-width: 116px; padding: 8px 10px; border: 1.5px solid var(--border-strong);
+    border-radius: 8px; background: var(--bg); color: var(--text);
+    font-family: 'Figtree', sans-serif; font-size: 13px; font-weight: 600;
+  }
+  .month-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .month-stat {
+    background: var(--bg); border-radius: 8px; padding: 10px;
+    min-width: 0;
+  }
+  .month-stat-label {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.7px;
+    color: var(--text-muted); text-transform: uppercase; margin-bottom: 5px;
+  }
+  .month-stat-value {
+    font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text);
+    overflow-wrap: anywhere;
+  }
+  .month-stat-value.red { color: var(--red); }
 
   /* ADD FORM */
   .add-section {
@@ -274,7 +301,7 @@
   <div class="top-bar">
     <div class="top-bar-title-wrap">
       <div class="top-bar-title">撳錢額度</div>
-      <div class="app-version">v2026.04.23.3</div>
+      <div class="app-version">v2026.04.28.1</div>
     </div>
     <div class="top-bar-right">
       <div class="sync-chip" id="sync-chip">
@@ -308,6 +335,30 @@
     </div>
     <div class="progress-track">
       <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- MONTH FILTER -->
+  <div class="month-panel">
+    <div class="month-filter-row">
+      <div class="month-filter-title">月份篩選</div>
+      <select class="month-select" id="month-filter" onchange="setMonthFilter(this.value)" aria-label="月份篩選">
+        <option value="all">全年</option>
+      </select>
+    </div>
+    <div class="month-stats">
+      <div class="month-stat">
+        <div class="month-stat-label" id="month-total-label">全年小計</div>
+        <div class="month-stat-value red" id="month-total">0.00</div>
+      </div>
+      <div class="month-stat">
+        <div class="month-stat-label">記錄</div>
+        <div class="month-stat-value" id="month-count">0</div>
+      </div>
+      <div class="month-stat">
+        <div class="month-stat-label">平均</div>
+        <div class="month-stat-value" id="month-average">0.00</div>
+      </div>
     </div>
   </div>
 
@@ -489,6 +540,7 @@
   const ALLOWED = ['nentivericfv@gmail.com', '1252719751@qq.com'];
   const TOTAL = 100000;
   const DB_PATH = 'records_2026';
+  const APP_YEAR = '2026';
 
   const fbApp = initializeApp(FIREBASE_CONFIG);
   const auth = getAuth(fbApp);
@@ -514,7 +566,7 @@
   }, {});
 
   let dbRef = ref(db, DB_PATH);
-  let records = {}, deleteTarget = null, formOpen = false;
+  let records = {}, deleteTarget = null, formOpen = false, monthFilter = 'all';
   let currentUser = null;
   let dbInitialized = false;
   let seedAttempted = false;
@@ -627,6 +679,36 @@
     else { chip.classList.add('loading'); txt.textContent = '同步中…'; }
   }
 
+  function syncMonthFilterOptions() {
+    const select = document.getElementById('month-filter');
+    const current = monthFilter;
+    select.innerHTML = '<option value="all">全年</option>' + Array.from({ length: 12 }, (_, i) => {
+      const month = String(i + 1).padStart(2, '0');
+      return `<option value="${APP_YEAR}-${month}">${i + 1}月</option>`;
+    }).join('');
+    select.value = current;
+    if (select.value !== current) {
+      monthFilter = 'all';
+      select.value = monthFilter;
+    }
+  }
+
+  function updateMonthStats(rows) {
+    const filtered = monthFilter === 'all'
+      ? rows
+      : rows.filter(r => r.date.startsWith(`${monthFilter}-`));
+    const total = filtered.reduce((s, r) => s + r.amount, 0);
+    const count = filtered.length;
+    const avg = count ? total / count : 0;
+    const label = monthFilter === 'all' ? '全年小計' : `${parseInt(monthFilter.split('-')[1])}月小計`;
+
+    document.getElementById('month-total-label').textContent = label;
+    document.getElementById('month-total').textContent = fmt(total);
+    document.getElementById('month-count').textContent = `${count}筆`;
+    document.getElementById('month-average').textContent = fmt(avg);
+    return filtered;
+  }
+
 
   function render() {
     const isAuthed = !!currentUser;
@@ -636,6 +718,8 @@
 
     let running = TOTAL;
     const rows = arr.map(r => { running -= r.amount; return { ...r, remain: running }; });
+    syncMonthFilterOptions();
+    const visibleRows = updateMonthStats(rows);
 
     const totalUsed = arr.reduce((s, r) => s + r.amount, 0);
     const totalRemain = TOTAL - totalUsed;
@@ -661,11 +745,12 @@
     }
 
     const list = document.getElementById('records-list');
-    if (rows.length === 0) {
-      list.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div>暫無記錄</div>`;
+    if (visibleRows.length === 0) {
+      const emptyText = monthFilter === 'all' ? '暫無記錄' : '該月份暫無記錄';
+      list.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div>${emptyText}</div>`;
       return;
     }
-    list.innerHTML = [...rows].reverse().map(r => `
+    list.innerHTML = [...visibleRows].reverse().map(r => `
       <div class="row ${isAuthed ? 'authed' : 'guest'}">
         <div class="row-date">${fmtDate(r.date)}</div>
         <div class="row-amount">−${fmt(r.amount)}</div>
@@ -695,6 +780,11 @@
     const now = new Date();
     const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
     return local.toISOString().split('T')[0];
+  };
+
+  window.setMonthFilter = value => {
+    monthFilter = value;
+    render();
   };
 
   // FORM
