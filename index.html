@@ -1,4 +1,4 @@
-<!-- VERSION: 2026.04.28.2 -->
+<!-- VERSION: 2026.04.29.1 -->
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#111112" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="./icon-v2026.04.14.13.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./apple-touch-icon-v2026.04.14.13.png">
-<link rel="manifest" href="./manifest.json?v=2026.04.28.2">
+<link rel="manifest" href="./manifest.json?v=2026.04.29.1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="撳錢額度">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -79,6 +79,7 @@
   .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); }
   .sync-chip.loading .sync-dot { background: var(--accent); animation: sync-pulse 1.6s ease-in-out infinite; }
   .sync-chip.live .sync-dot { background: #22c55e; }
+  .sync-chip.offline .sync-dot { background: var(--text-muted); }
   .sync-chip.error .sync-dot { background: var(--red); }
   @keyframes sync-pulse {
     0%   { box-shadow: 0 0 0 0 rgba(91,155,213,0.4); }
@@ -301,7 +302,7 @@
   <div class="top-bar">
     <div class="top-bar-title-wrap">
       <div class="top-bar-title">撳錢額度</div>
-      <div class="app-version">v2026.04.28.2</div>
+      <div class="app-version">v2026.04.29.1</div>
     </div>
     <div class="top-bar-right">
       <div class="sync-chip" id="sync-chip">
@@ -475,7 +476,7 @@
 <script>
   // SW update logic
   if ('serviceWorker' in navigator) {
-    const APP_VERSION = '2026.04.28.2';
+    const APP_VERSION = '2026.04.29.1';
     let waitingWorker = null;
     let toastTimer = null;
 
@@ -585,20 +586,39 @@
   }, {});
 
   let dbRef = ref(db, DB_PATH);
+  const connectedRef = ref(db, '.info/connected');
   let records = {}, deleteTarget = null, formOpen = false, monthFilter = 'all';
   let currentUser = null;
   let dbInitialized = false;
   let seedAttempted = false;
+  let isConnected = null;
+  let hasLoadedRecords = false;
+  let hasSyncError = false;
+  let pendingSyncWrites = 0;
 
   // INIT DB (always, no auth needed to read)
-  setSyncStatus('connecting');
+  updateSyncStatus();
+  onValue(connectedRef, snap => {
+    isConnected = !!snap.val();
+    if (isConnected) hasSyncError = false;
+    updateSyncStatus();
+  }, () => {
+    hasSyncError = true;
+    updateSyncStatus();
+  });
   onValue(dbRef, snap => {
     dbInitialized = true;
+    hasLoadedRecords = true;
     records = snap.val() || {};
-    setSyncStatus('live');
+    if (pendingSyncWrites > 0) pendingSyncWrites = Math.max(0, pendingSyncWrites - 1);
+    hasSyncError = false;
+    updateSyncStatus();
     render();
     maybeSeedDefaults();
-  }, () => setSyncStatus('error'));
+  }, () => {
+    hasSyncError = true;
+    updateSyncStatus();
+  });
 
   // AUTH STATE
   onAuthStateChanged(auth, user => {
@@ -685,17 +705,41 @@
     }
   }
 
-  async function seedDefaults() {
-    await update(dbRef, DEFAULT_RECORD_KEYS);
+  async function runSyncedWrite(writeFn) {
+    pendingSyncWrites += 1;
+    hasSyncError = false;
+    updateSyncStatus();
+    try {
+      return await writeFn();
+    } catch (e) {
+      pendingSyncWrites = Math.max(0, pendingSyncWrites - 1);
+      hasSyncError = true;
+      updateSyncStatus();
+      throw e;
+    }
   }
 
-  function setSyncStatus(state) {
+  async function seedDefaults() {
+    await runSyncedWrite(() => update(dbRef, DEFAULT_RECORD_KEYS));
+  }
+
+  function updateSyncStatus() {
     const chip = document.getElementById('sync-chip');
     const txt = document.getElementById('sync-text');
     chip.className = 'sync-chip show';
-    if (state === 'live') { chip.classList.add('live'); txt.textContent = '已同步'; }
-    else if (state === 'error') { chip.classList.add('error'); txt.textContent = '連線失敗'; }
-    else { chip.classList.add('loading'); txt.textContent = '同步中…'; }
+    if (hasSyncError) {
+      chip.classList.add('error');
+      txt.textContent = '同步失敗';
+    } else if (isConnected === false) {
+      chip.classList.add('offline');
+      txt.textContent = '離線';
+    } else if (isConnected === null || pendingSyncWrites > 0 || !hasLoadedRecords) {
+      chip.classList.add('loading');
+      txt.textContent = '同步中…';
+    } else {
+      chip.classList.add('live');
+      txt.textContent = '已同步';
+    }
   }
 
   function syncMonthFilterOptions() {
@@ -838,7 +882,7 @@
     const btn = document.getElementById('save-btn');
     btn.disabled = true; btn.textContent = '儲存中…';
     try {
-      await push(dbRef, { date, amount, ts: Date.now() });
+      await runSyncedWrite(() => push(dbRef, { date, amount, ts: Date.now() }));
       closeForm();
     } catch (e) {
       console.error(e);
@@ -869,7 +913,7 @@
       return;
     }
     try {
-      await update(ref(db, `${DB_PATH}/${editTarget}`), { date, amount });
+      await runSyncedWrite(() => update(ref(db, `${DB_PATH}/${editTarget}`), { date, amount }));
       closeModal('edit-modal');
       editTarget = null;
     } catch(e) {
@@ -896,7 +940,7 @@
   window.confirmDelete = async () => {
     if (deleteTarget) {
       try {
-        await remove(ref(db, `${DB_PATH}/${deleteTarget}`));
+        await runSyncedWrite(() => remove(ref(db, `${DB_PATH}/${deleteTarget}`)));
       } catch(e) {
         console.error(e);
         showWriteError('刪除失敗，請檢查網絡後再試');
