@@ -1,4 +1,4 @@
-const VERSION = '2026.10.20.1';
+const VERSION = '2026.10.20.2';
 const CACHE = `withdrawal-tracker-v${VERSION}`;
 
 self.addEventListener('install', e => {
@@ -6,7 +6,7 @@ self.addEventListener('install', e => {
     caches.open(CACHE).then(c => c.addAll([
       './',
       './index.html',
-      './manifest.json?v=2026.10.20.1',
+      './manifest.json?v=2026.10.20.2',
       './icon-192-v2026.04.14.13.png',
       './apple-touch-icon-v2026.04.14.13.png',
       './icon-v2026.04.14.13.svg'
