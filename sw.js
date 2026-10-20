@@ -1,4 +1,4 @@
-const VERSION = '2026.05.03.1';
+const VERSION = '2026.10.20.1';
 const CACHE = `withdrawal-tracker-v${VERSION}`;
 
 self.addEventListener('install', e => {
@@ -6,7 +6,7 @@ self.addEventListener('install', e => {
     caches.open(CACHE).then(c => c.addAll([
       './',
       './index.html',
-      './manifest.json?v=2026.05.03.1',
+      './manifest.json?v=2026.10.20.1',
       './icon-192-v2026.04.14.13.png',
       './apple-touch-icon-v2026.04.14.13.png',
       './icon-v2026.04.14.13.svg'
@@ -27,10 +27,26 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
 
-  // Firebase / Google 請求：直接網絡，唔快取
-  if (e.request.url.includes('firebaseio.com') ||
-      e.request.url.includes('googleapis.com') ||
-      e.request.url.includes('gstatic.com')) {
+  const host = new URL(e.request.url).hostname;
+
+  // Firebase SDK 同字體：緩存優先，離線都開到 app
+  if (host === 'www.gstatic.com' || host === 'fonts.googleapis.com' || host === 'fonts.gstatic.com') {
+    e.respondWith(
+      caches.match(e.request).then(cached =>
+        cached || fetch(e.request).then(res => {
+          if (res.ok || res.type === 'opaque') {
+            const copy = res.clone();
+            caches.open(CACHE).then(c => c.put(e.request, copy));
+          }
+          return res;
+        })
+      )
+    );
+    return;
+  }
+
+  // Firebase / Google 其他請求：直接網絡，唔快取
+  if (host.endsWith('firebaseio.com') || host.endsWith('googleapis.com') || host.endsWith('gstatic.com')) {
     return;
   }
   if (e.request.mode === 'navigate') {

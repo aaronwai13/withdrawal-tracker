@@ -1,8 +1,8 @@
 {
   "rules": {
-    "records_2026": {
-      ".read": true,
-      ".write": "auth != null && (auth.token.email == 'nentivericfv@gmail.com' || auth.token.email == '1252719751@qq.com')",
+    "$year": {
+      ".read": "$year.matches(/^records_[0-9]{4}$/)",
+      ".write": "$year.matches(/^records_[0-9]{4}$/) && auth != null && (auth.token.email == 'nentivericfv@gmail.com' || auth.token.email == '1252719751@qq.com')",
       "$record": {
         ".validate": "newData.hasChildren(['date', 'amount', 'ts'])",
         "date": {

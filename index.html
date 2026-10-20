@@ -1,4 +1,4 @@
-<!-- VERSION: 2026.05.03.1 -->
+<!-- VERSION: 2026.10.20.1 -->
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#111112" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="./icon-v2026.04.14.13.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./apple-touch-icon-v2026.04.14.13.png">
-<link rel="manifest" href="./manifest.json?v=2026.05.03.1">
+<link rel="manifest" href="./manifest.json?v=2026.10.20.1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="撳錢額度">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -302,7 +302,7 @@
   <div class="top-bar">
     <div class="top-bar-title-wrap">
       <div class="top-bar-title">撳錢額度</div>
-      <div class="app-version">v2026.05.03.1</div>
+      <div class="app-version">v2026.10.20.1</div>
     </div>
     <div class="top-bar-right">
       <div class="sync-chip" id="sync-chip">
@@ -476,7 +476,7 @@
 <script>
   // SW update logic
   if ('serviceWorker' in navigator) {
-    const APP_VERSION = '2026.05.03.1';
+    const APP_VERSION = '2026.10.20.1';
     let waitingWorker = null;
     let toastTimer = null;
 
@@ -559,7 +559,8 @@
 
   const ALLOWED = ['nentivericfv@gmail.com', '1252719751@qq.com'];
   const TOTAL = 100000;
-  const DB_PATH = 'records_2026';
+  const YEAR = new Date().getFullYear();
+  const DB_PATH = `records_${YEAR}`;
 
   const fbApp = initializeApp(FIREBASE_CONFIG);
   const auth = getAuth(fbApp);
@@ -569,27 +570,10 @@
   const isIOS = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
   const useRedirectAuth = isStandalone && isIOS;
 
-  const DEFAULT_RECORDS = [
-    { date: '2026-01-09', amount: 1796.80 },
-    { date: '2026-01-19', amount: 2149.44 },
-    { date: '2026-01-29', amount: 4463.50 },
-    { date: '2026-02-10', amount: 798.75 },
-    { date: '2026-02-24', amount: 176.90 },
-    { date: '2026-03-03', amount: 4410.50 },
-    { date: '2026-03-08', amount: 885.20 },
-  ];
-
-  const DEFAULT_RECORD_KEYS = DEFAULT_RECORDS.reduce((map, record, index) => {
-    map[`seed-${record.date}-${index + 1}`] = { ...record, ts: index + 1 };
-    return map;
-  }, {});
-
   let dbRef = ref(db, DB_PATH);
   const connectedRef = ref(db, '.info/connected');
   let records = {}, deleteTarget = null, formOpen = false, monthFilter = 'all';
   let currentUser = null;
-  let dbInitialized = false;
-  let seedAttempted = false;
   let lastOptionsKey = '';
   let isConnected = null;
   let hasLoadedRecords = false;
@@ -607,14 +591,11 @@
     updateSyncStatus();
   });
   onValue(dbRef, snap => {
-    dbInitialized = true;
     hasLoadedRecords = true;
     records = snap.val() || {};
-    if (pendingSyncWrites > 0) pendingSyncWrites = Math.max(0, pendingSyncWrites - 1);
     hasSyncError = false;
     updateSyncStatus();
     render();
-    maybeSeedDefaults();
   }, () => {
     hasSyncError = true;
     updateSyncStatus();
@@ -662,7 +643,6 @@
     document.getElementById('logout-body').textContent = `確定要登出 ${user.email}？`;
     closeModal('login-modal');
     render();
-    maybeSeedDefaults();
   }
 
   // SIGN IN
@@ -694,17 +674,6 @@
     window.showToast?.(msg, 'var(--red)');
   }
 
-  async function maybeSeedDefaults() {
-    if (!currentUser || !dbInitialized || seedAttempted || Object.keys(records).length > 0) return;
-    seedAttempted = true;
-    try {
-      await seedDefaults();
-    } catch (e) {
-      seedAttempted = false;
-      console.error(e);
-    }
-  }
-
   async function runSyncedWrite(writeFn) {
     pendingSyncWrites += 1;
     hasSyncError = false;
@@ -712,15 +681,12 @@
     try {
       return await writeFn();
     } catch (e) {
-      pendingSyncWrites = Math.max(0, pendingSyncWrites - 1);
       hasSyncError = true;
-      updateSyncStatus();
       throw e;
+    } finally {
+      pendingSyncWrites -= 1;
+      updateSyncStatus();
     }
-  }
-
-  async function seedDefaults() {
-    await runSyncedWrite(() => update(dbRef, DEFAULT_RECORD_KEYS));
   }
 
   function updateSyncStatus() {
@@ -746,14 +712,14 @@
     const select = document.getElementById('month-filter');
     const current = monthFilter;
     const years = [...new Set([
-      new Date().getFullYear().toString(),
+      String(YEAR),
       ...Object.values(records).map(r => r.date?.split('-')[0]).filter(Boolean)
     ])].sort();
     const multiYear = years.length > 1;
     const monthsWithData = new Set(
       Object.values(records).map(r => r.date?.substring(0, 7)).filter(Boolean)
     );
-    monthsWithData.add(new Date().toISOString().substring(0, 7));
+    monthsWithData.add(todayLocal().substring(0, 7));
     const options = ['<option value="all">全年</option>'];
     for (const year of years) {
       for (let i = 0; i < 12; i++) {
@@ -900,6 +866,10 @@
       setTimeout(() => amtEl.classList.remove('err'), 1000);
       return;
     }
+    if (!date.startsWith(`${YEAR}-`)) {
+      showWriteError(`日期須喺 ${YEAR} 年內`);
+      return;
+    }
     const btn = document.getElementById('save-btn');
     btn.disabled = true; btn.textContent = '儲存中…';
     try {
@@ -931,6 +901,10 @@
       amtEl.classList.add('err');
       showWriteError('請輸入有效金額，最多兩位小數');
       setTimeout(() => amtEl.classList.remove('err'), 1000);
+      return;
+    }
+    if (!date.startsWith(`${YEAR}-`)) {
+      showWriteError(`日期須喺 ${YEAR} 年內`);
       return;
     }
     try {
